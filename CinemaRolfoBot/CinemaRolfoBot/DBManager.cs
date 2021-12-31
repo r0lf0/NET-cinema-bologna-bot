@@ -2,6 +2,7 @@
 using CinemaRolfoBot.Model.DB;
 using CinemaRolfoBot.Model.Json;
 using CinemaRolfoBot.Utils;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -66,7 +67,7 @@ namespace CinemaRolfoBot
                 //Check for new or modified films
                 foreach (Model.Json.Film? filmJson in filmsWithShowings.films ?? Enumerable.Empty<Model.Json.Film>())
                 {
-                    Model.DB.Film? filmDB = Context.Films.Find(filmJson.id);
+                    Model.DB.Film? filmDB = Context.Films.Include(f => f.Showings).FirstOrDefault(f => f.Id == filmJson.id);
                     if (filmDB == null) //New film to be added
                     {
                         UpdateShowingsOutput updateShowingsOutput = new UpdateShowingsOutput();
@@ -83,7 +84,7 @@ namespace CinemaRolfoBot
                 }
 
                 //Check for removed films
-                foreach (Model.DB.Film filmDb in Context.Films)
+                foreach (Model.DB.Film filmDb in Context.Films.Include(f => f.Showings))
                 {
                     Model.Json.Film? filmJson = filmsWithShowings.films.FirstOrDefault(f => f.id == filmDb.Id);
                     if (filmJson == null) //Removed film

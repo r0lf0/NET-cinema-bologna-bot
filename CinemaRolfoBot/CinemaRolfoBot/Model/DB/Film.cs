@@ -153,7 +153,7 @@ namespace CinemaRolfoBot.Model.DB
                     this.Showings.Add(showingDb_new);
                     output.AddedShowings.Add(showingDb_new);
                 }
-                else if (showingDb_current != showingDb_new) //Modified showing
+                else if (!showingDb_new.Equals(showingDb_current)) //Modified showing
                 {
                     this.Showings.Remove(showingDb_current);
                     this.Showings.Add(showingDb_new);
