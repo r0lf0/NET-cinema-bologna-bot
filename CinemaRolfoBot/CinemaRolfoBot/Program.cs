@@ -20,11 +20,17 @@ if (string.IsNullOrEmpty(PostgresConnectionString))
     return -1;
 }
 
+if (!int.TryParse(Environment.GetEnvironmentVariable(Const.ENV_VAR_KEY_UPDATE_FREQ), out int updateFrequencySeconds))
+{
+    Console.WriteLine($"La variabile d'ambiente {Const.ENV_VAR_KEY_UPDATE_FREQ} non risulta correttamente impostata.");
+    return -1;
+}
+
 TelegramBotClient telegramBotClient = await InitBot(Token);
 DBManager dbManager = new DBManager(PostgresConnectionString);
 
 CancellationToken CancellationToken = new CancellationToken();
-Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(5), CancellationToken);
+Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(updateFrequencySeconds), CancellationToken);
 
 while (true)
     await Task.Delay(TimeSpan.FromMinutes(1), CancellationToken);

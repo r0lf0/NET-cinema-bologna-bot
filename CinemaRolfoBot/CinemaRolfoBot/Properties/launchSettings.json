@@ -1,7 +1,10 @@
 {
   "profiles": {
     "CinemaRolfoBot": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "environmentVariables": {
+        "UPDATE_FREQ": "10"
+      }
     }
   }
 }

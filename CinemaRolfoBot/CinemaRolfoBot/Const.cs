@@ -18,6 +18,8 @@ namespace CinemaRolfoBot
         /// </summary>
         public const string ENV_VAR_KEY_POSTGRESSQL = "POSTGRESSQL";
 
+        public const string ENV_VAR_KEY_UPDATE_FREQ = "UPDATE_FREQ";
+
         public const string TSB_FILMS_WITH_SHOWING_URL = @"https://www.thespacecinema.it/data/filmswithshowings/3";
     }
 }
