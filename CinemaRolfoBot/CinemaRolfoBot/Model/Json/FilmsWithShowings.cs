@@ -8,12 +8,13 @@ namespace CinemaRolfoBot.Model.Json
 {
     public class FilmsWithShowings
     {
-            public Film[] films { get; set; }
-            public string cdate { get; set; }
-            public string SiteRootPath { get; set; }
-            public string Site { get; set; }
-            public string Lang { get; set; }
+        public Film[] films { get; set; }
+        public string cdate { get; set; }
+        public string SiteRootPath { get; set; }
+        public string Site { get; set; }
+        public string Lang { get; set; }
     }
+
     public class Film
     {
         public int original_s_count { get; set; }
@@ -54,7 +55,7 @@ namespace CinemaRolfoBot.Model.Json
         public object rank_votes { get; set; }
         public object rank_value { get; set; }
         public Promo_Labels promo_labels { get; set; }
-        public DateTime ReleaseDate { get; set; }
+        public DateTime? ReleaseDate { get; set; }
         public string type { get; set; }
         public string wantsee { get; set; }
         public bool showwantsee { get; set; }

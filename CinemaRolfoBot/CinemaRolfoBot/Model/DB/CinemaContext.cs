@@ -14,6 +14,8 @@ namespace CinemaRolfoBot.Model.DB
         public DbSet<Film> Films { get; set; }
         public DbSet<Showing> Showings { get; set; }
 
+        public DbSet<RunningInfo> RunningInfos { get; set; }
+
         public CinemaContext(string connectionString)
         {
             this.connectionString = connectionString;

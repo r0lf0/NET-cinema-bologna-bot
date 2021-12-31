@@ -1,0 +1,121 @@
+﻿using CinemaRolfoBot.Model.Beans;
+using CinemaRolfoBot.Model.DB;
+using CinemaRolfoBot.Model.Json;
+using CinemaRolfoBot.Utils;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
+namespace CinemaRolfoBot
+{
+    public class DBManager
+    {
+        private readonly CinemaContext Context;
+
+        private static readonly HttpClient httpClient = new HttpClient();
+
+        public DBManager(string PostgresConnectionString)
+        {
+            Context = new CinemaContext(PostgresConnectionString);
+        }
+
+        public string UpdateDB(string lastFilmsWithShowing, out UpdateDBOutput output)
+        {
+            output = new UpdateDBOutput();
+            string responseBody = "";
+            try
+            {
+                responseBody = AsyncHelpers.RunSync(() => httpClient.GetStringAsync(Const.TSB_FILMS_WITH_SHOWING_URL));
+            }
+            catch (HttpRequestException e)
+            {
+                //TODO Notify errors to mantainers users
+                Console.WriteLine($"Errore nella richiesta HTTP verso {Const.TSB_FILMS_WITH_SHOWING_URL}. Error message: {e.Message}");
+                return lastFilmsWithShowing;
+            }
+
+            //Comparing with previous responseBody
+            string currentFilmsWithShowings = Regex.Replace(responseBody, @"\s+", string.Empty);
+            if (lastFilmsWithShowing == currentFilmsWithShowings)
+                return currentFilmsWithShowings;
+
+            FilmsWithShowings? filmsWithShowings = null;
+            try
+            {
+                filmsWithShowings = JsonSerializer.Deserialize<FilmsWithShowings>(responseBody);
+            }
+            catch (JsonException e)
+            {
+                //TODO Notify errors to mantainers users
+                Console.WriteLine($"Errore nel parsing JSON della response da {Const.TSB_FILMS_WITH_SHOWING_URL}. Error message: {e.Message}");
+                return lastFilmsWithShowing;
+            }
+
+            //Populating DB
+            if (filmsWithShowings != null)
+            {
+                //Updating "lastUpdate" info on DB
+                var lastUpdate = Context.RunningInfos.Find(ERunningInfoId.LastUpdate);
+                if (lastUpdate == null)
+                {
+                    lastUpdate = new RunningInfo(ERunningInfoId.LastUpdate, DateTime.Now);
+                    Context.RunningInfos.Add(lastUpdate);
+                }
+                else
+                    lastUpdate.Value = DateTime.Now;
+
+                //Check for new or modified films
+                foreach (Model.Json.Film? filmJson in filmsWithShowings.films ?? Enumerable.Empty<Model.Json.Film>())
+                {
+                    Model.DB.Film? filmDB = Context.Films.Find(filmJson.id);
+                    if (filmDB == null) //New film to be added
+                    {
+                        UpdateShowingsOutput updateShowingsOutput = new UpdateShowingsOutput();
+                        filmDB = new Model.DB.Film(filmJson, out updateShowingsOutput);
+                        Context.Films.Add(filmDB);
+
+                        output.AddedFilms.Add(filmDB);
+                        output.UpdatedShowings.Add(updateShowingsOutput);
+                    }
+                    else //Modified film
+                    {
+                        output.UpdatedShowings.Add(filmDB.UpdateFilm(filmJson));
+                    }
+                }
+
+                //Check for removed films
+                foreach (Model.DB.Film filmDb in Context.Films)
+                {
+                    Model.Json.Film? filmJson = filmsWithShowings.films.FirstOrDefault(f => f.id == filmDb.Id);
+                    if (filmJson == null) //Removed film
+                        output.RemovedFilms.Add(filmDb);
+                }
+
+                //Remove films from DB
+                foreach (Model.DB.Film filmToRemove in output.RemovedFilms)
+                    Context.Remove(filmToRemove);
+
+                try
+                {
+                    Context.SaveChanges();
+                }
+                catch (Exception e)
+                {
+                    ;
+                }
+            }
+
+            return currentFilmsWithShowings;
+        }
+
+        public void WipeDB()
+        {
+            foreach (Model.DB.Film film in Context.Films)
+            {
+                foreach (Model.DB.Showing showing in film.Showings ?? Enumerable.Empty<Model.DB.Showing>())
+                    Context.Showings.Remove(showing);
+                Context.Films.Remove(film);
+            }
+            Context.SaveChanges();
+        }
+    }
+}

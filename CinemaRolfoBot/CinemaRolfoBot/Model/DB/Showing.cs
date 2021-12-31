@@ -1,6 +1,8 @@
-﻿using System;
+﻿using CinemaRolfoBot.Utils;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,11 +13,47 @@ namespace CinemaRolfoBot.Model.DB
     {
         [Key]
         [Required]
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         [Required]
-        public DateTime DateAndTime { get; set; }
+        public DateTime DateAndTime
+        {
+            get => _DateAndTime;
+            set { _DateAndTime = value.SetKindUtc(); }
+        }
 
-        public int Screen { get; set; }
+        [NotMapped]
+        private DateTime _DateAndTime;
+
+        public string Screen { get; set; }
+
+        //Foreign key for Film
+        [Required]
+        public string FilmId { get; set; }
+
+        public Film Standard { get; set; }
+        public static Showing Where { get; internal set; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj == null || obj.GetType() != typeof(Showing))
+                return base.Equals(obj);
+
+            Showing typedObj = (Showing)obj;
+            return (this.Id == typedObj.Id
+                && this.DateAndTime == typedObj.DateAndTime
+                && this.Screen == typedObj.Screen);
+        }
+
+        public Showing()
+        {
+        }
+
+        public Showing(Json.Time timeJson)
+        {
+            this.Id = timeJson.session_id;
+            this.DateAndTime = timeJson.date.SetKindUtc();
+            this.Screen = timeJson.screen_number;
+        }
     }
 }

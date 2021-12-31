@@ -1,4 +1,5 @@
 ﻿using CinemaRolfoBot;
+using CinemaRolfoBot.Model.Beans;
 using CinemaRolfoBot.Model.DB;
 using CinemaRolfoBot.Model.Json;
 using System.Text.Json;
@@ -20,10 +21,10 @@ if (string.IsNullOrEmpty(PostgresConnectionString))
 }
 
 TelegramBotClient telegramBotClient = await InitBot(Token);
-CinemaContext context = InitDB(PostgresConnectionString);
+DBManager dbManager = new DBManager(PostgresConnectionString);
 
 CancellationToken CancellationToken = new CancellationToken();
-Task task = PeriodicUpdateDB(TimeSpan.FromMinutes(5), CancellationToken);
+Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(5), CancellationToken);
 
 while (true)
     await Task.Delay(TimeSpan.FromMinutes(1), CancellationToken);
@@ -40,56 +41,15 @@ async Task<TelegramBotClient> InitBot(string Token)
     return telegramBotClient;
 }
 
-CinemaContext InitDB(string PostgresConnectionString)
-{
-    CinemaContext Context = new CinemaContext(PostgresConnectionString);
-    return Context;
-}
-
-async Task PeriodicUpdateDB(TimeSpan interval, CancellationToken cancellationToken)
+async Task PeriodicUpdateDB(DBManager dbManager, TimeSpan interval, CancellationToken cancellationToken)
 {
     string lastFilmsWithShowing = "";
     while (true)
     {
-        lastFilmsWithShowing = await UpdateDB(lastFilmsWithShowing);
+        lastFilmsWithShowing = dbManager.UpdateDB(lastFilmsWithShowing, out UpdateDBOutput output);
 
         await Task.Delay(interval, cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             break;
     }
-}
-
-async Task<string> UpdateDB(string lastFilmsWithShowing)
-{
-    string responseBody = "";
-    try
-    {
-        HttpClient client = new();
-        responseBody = await client.GetStringAsync(Const.TSB_FILMS_WITH_SHOWING_URL);
-    }
-    catch (HttpRequestException e)
-    {
-        //TODO Notify errors to mantainers users
-        Console.WriteLine($"Errore nella richiesta HTTP verso {Const.TSB_FILMS_WITH_SHOWING_URL}. Error message: {e.Message}");
-        return lastFilmsWithShowing;
-    }
-
-    //Comparing with previous responseBody
-    string currentFilmsWithShowings = Regex.Replace(responseBody, @"\s+", String.Empty);
-    if (lastFilmsWithShowing == currentFilmsWithShowings)
-        return currentFilmsWithShowings;
-
-    FilmsWithShowings? filmsWithShowings = null;
-    try
-    {
-        filmsWithShowings = JsonSerializer.Deserialize<FilmsWithShowings>(responseBody);
-    }
-    catch (JsonException e)
-    {
-        //TODO Notify errors to mantainers users
-        Console.WriteLine($"Errore nel parsing JSON della response da {Const.TSB_FILMS_WITH_SHOWING_URL}. Error message: {e.Message}");
-        return lastFilmsWithShowing;
-    }
-
-    return currentFilmsWithShowings;
 }
