@@ -1,12 +1,8 @@
 ﻿using CinemaRolfoBot;
 using CinemaRolfoBot.Model.Beans;
-using CinemaRolfoBot.Model.DB;
-using CinemaRolfoBot.Model.Json;
 using log4net;
 using log4net.Config;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Telegram.Bot;
 
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);

@@ -2,14 +2,8 @@
 using CinemaRolfoBot.Model.Json;
 using CinemaRolfoBot.Utils;
 using log4net;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CinemaRolfoBot.Model.DB
 {
