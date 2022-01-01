@@ -1,6 +1,7 @@
 ﻿using CinemaRolfoBot.Model.Beans;
 using CinemaRolfoBot.Model.Json;
 using CinemaRolfoBot.Utils;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -15,6 +16,7 @@ namespace CinemaRolfoBot.Model.DB
     public class Film
     {
         private static readonly HttpClient httpClient = new HttpClient();
+        private static readonly ILog Log = LogManager.GetLogger(typeof(DbManager));
 
         [Key]
         [Required]
@@ -123,7 +125,7 @@ namespace CinemaRolfoBot.Model.DB
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error while downloading poster for film {this.Id}-{this.Title}. Message: {ex.Message}");
+                    Log.Warn($"Error while downloading poster for film {this.Id}-{this.Title}. Message: {ex.Message}");
                 }
             }
         }

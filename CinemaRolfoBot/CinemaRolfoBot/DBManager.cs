@@ -2,19 +2,21 @@
 using CinemaRolfoBot.Model.DB;
 using CinemaRolfoBot.Model.Json;
 using CinemaRolfoBot.Utils;
+using log4net;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace CinemaRolfoBot
 {
-    public class DBManager
+    public class DbManager
     {
         private readonly CinemaContext Context;
 
         private static readonly HttpClient httpClient = new HttpClient();
+        private static readonly ILog Log = LogManager.GetLogger(typeof(DbManager));
 
-        public DBManager(string PostgresConnectionString)
+        public DbManager(string PostgresConnectionString)
         {
             Context = new CinemaContext(PostgresConnectionString);
         }
@@ -30,7 +32,7 @@ namespace CinemaRolfoBot
             catch (HttpRequestException e)
             {
                 //TODO Notify errors to mantainers users
-                Console.WriteLine($"Errore nella richiesta HTTP verso {Const.TSB_FILMS_WITH_SHOWING_URL}. Error message: {e.Message}");
+                Log.Error($"HTTP error on getting '{Const.TSB_FILMS_WITH_SHOWING_URL}'. Error message: {e.Message}");
                 return lastFilmsWithShowing;
             }
 
@@ -47,7 +49,7 @@ namespace CinemaRolfoBot
             catch (JsonException e)
             {
                 //TODO Notify errors to mantainers users
-                Console.WriteLine($"Errore nel parsing JSON della response da {Const.TSB_FILMS_WITH_SHOWING_URL}. Error message: {e.Message}");
+                Log.Error($"JSON parsing error while analyzing '{Const.TSB_FILMS_WITH_SHOWING_URL}' response. Error message: {e.Message}");
                 return lastFilmsWithShowing;
             }
 
