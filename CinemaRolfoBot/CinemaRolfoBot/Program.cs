@@ -9,7 +9,6 @@ using Telegram.Bot;
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 ILog Log = LogManager.GetLogger(typeof(Program));
 
-var pippo = new FileInfo($"log4net.config");
 _ = XmlConfigurator.Configure(LogManager.GetRepository(Assembly.GetCallingAssembly()), new FileInfo($"log4net.config"));
 Log.Info("Logger started");
 
@@ -50,7 +49,7 @@ catch (Exception ex)
     return -1;
 }
 
-TelegramBotClient telegramBotClient = await InitBot(Token);
+BotManager botManager = new BotManager(Token);
 
 CancellationToken CancellationToken = new CancellationToken();
 Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(updateFrequencySeconds), TimeSpan.FromMinutes(updateResetMinutes), CancellationToken);
@@ -59,16 +58,6 @@ while (true)
     await Task.Delay(TimeSpan.FromMinutes(1), CancellationToken);
 
 return -1;
-
-async Task<TelegramBotClient> InitBot(string Token)
-{
-    TelegramBotClient? telegramBotClient = new TelegramBotClient(Token);
-
-    var me = await telegramBotClient.GetMeAsync();
-    Log.Info($"Telegram bot '{me.FirstName}' with id '{me.Id}' correctly initialized.");
-
-    return telegramBotClient;
-}
 
 async Task PeriodicUpdateDB(DbManager dbManager, TimeSpan updateFreqSeconds, TimeSpan resetFreqMinutes, CancellationToken cancellationToken)
 {
