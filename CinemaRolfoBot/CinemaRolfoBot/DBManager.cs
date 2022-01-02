@@ -16,41 +16,32 @@ namespace CinemaRolfoBot
         private static readonly HttpClient httpClient = new HttpClient();
         private static readonly ILog Log = LogManager.GetLogger(typeof(DbManager));
 
+        private string lastFilmsWithShowings = "";
+
         public DbManager(string PostgresConnectionString)
         {
             Context = new CinemaContext(PostgresConnectionString);
         }
 
-        public string UpdateDB(string lastFilmsWithShowing, out UpdateDBOutput output)
+        public void UpdateDB(string filmsWithShowings_json, out UpdateDBOutput output)
         {
             output = new UpdateDBOutput();
-            string responseBody = "";
-            try
-            {
-                responseBody = AsyncHelpers.RunSync(() => httpClient.GetStringAsync(Const.TSB_FILMS_WITH_SHOWING_URL));
-            }
-            catch (HttpRequestException e)
-            {
-                //TODO Notify errors to mantainers users
-                Log.Error($"HTTP error on getting '{Const.TSB_FILMS_WITH_SHOWING_URL}'. Error message: {e.Message}");
-                return lastFilmsWithShowing;
-            }
 
             //Comparing with previous responseBody
-            string currentFilmsWithShowings = Regex.Replace(responseBody, @"\s+", string.Empty);
-            if (lastFilmsWithShowing == currentFilmsWithShowings)
-                return currentFilmsWithShowings;
+            filmsWithShowings_json = Regex.Replace(filmsWithShowings_json, @"\s+", string.Empty);
+            if (filmsWithShowings_json == lastFilmsWithShowings)
+                return;
 
             FilmsWithShowings? filmsWithShowings = null;
             try
             {
-                filmsWithShowings = JsonSerializer.Deserialize<FilmsWithShowings>(responseBody);
+                filmsWithShowings = JsonSerializer.Deserialize<FilmsWithShowings>(filmsWithShowings_json);
             }
             catch (JsonException e)
             {
                 //TODO Notify errors to mantainers users
                 Log.Error($"JSON parsing error while analyzing '{Const.TSB_FILMS_WITH_SHOWING_URL}' response. Error message: {e.Message}");
-                return lastFilmsWithShowing;
+                return;
             }
 
             //Populating DB
@@ -103,22 +94,35 @@ namespace CinemaRolfoBot
                 }
                 catch (Exception e)
                 {
-                    ;
+                    output = new UpdateDBOutput();
+                    Log.Error($"Error while updating database.");
                 }
             }
 
-            return currentFilmsWithShowings;
+            return;
         }
 
         public void WipeDB()
         {
+            RunningInfo? lastReset = Context.RunningInfos.Find(ERunningInfoId.LastReset);
+            if (lastReset == null)
+                Context.RunningInfos.Add(new RunningInfo(ERunningInfoId.LastReset, DateTime.Now));
+            else
+                lastReset.Value = DateTime.Now;
+
             foreach (Model.DB.Film film in Context.Films)
             {
                 foreach (Model.DB.Showing showing in film.Showings ?? Enumerable.Empty<Model.DB.Showing>())
                     Context.Showings.Remove(showing);
                 Context.Films.Remove(film);
             }
+
             Context.SaveChanges();
+        }
+
+        public DateTime? GetRunningInfo(ERunningInfoId runningInfoId)
+        {
+            return (Context?.RunningInfos?.Find(runningInfoId)?.Value);
         }
     }
 }

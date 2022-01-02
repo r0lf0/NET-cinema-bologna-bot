@@ -3,7 +3,8 @@
     "CinemaRolfoBot": {
       "commandName": "Project",
       "environmentVariables": {
-        "UPDATE_FREQ": "10"
+        "UPDATE_FREQ_SECONDS": "300",
+        "RESET_FREQ_MINUTES": "1440"
       }
     }
   }

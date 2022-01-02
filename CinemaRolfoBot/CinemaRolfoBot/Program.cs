@@ -1,5 +1,6 @@
 ﻿using CinemaRolfoBot;
 using CinemaRolfoBot.Model.Beans;
+using CinemaRolfoBot.Utils;
 using log4net;
 using log4net.Config;
 using System.Reflection;
@@ -26,9 +27,15 @@ if (string.IsNullOrEmpty(PostgresConnectionString))
     return -1;
 }
 
-if (!int.TryParse(Environment.GetEnvironmentVariable(Const.ENV_VAR_KEY_UPDATE_FREQ), out int updateFrequencySeconds))
+if (!int.TryParse(Environment.GetEnvironmentVariable(Const.ENV_VAR_KEY_UPDATE_FREQ_SECONDS), out int updateFrequencySeconds))
 {
-    Log.Fatal($"The environment variable '{Const.ENV_VAR_KEY_UPDATE_FREQ}' isn't correctly setted.");
+    Log.Fatal($"The environment variable '{Const.ENV_VAR_KEY_UPDATE_FREQ_SECONDS}' isn't correctly setted.");
+    return -1;
+}
+
+if (!int.TryParse(Environment.GetEnvironmentVariable(Const.ENV_VAR_KEY_RESET_FREQ_MINUTES), out int updateResetMinutes))
+{
+    Log.Fatal($"The environment variable '{Const.ENV_VAR_KEY_RESET_FREQ_MINUTES}' isn't correctly setted.");
     return -1;
 }
 
@@ -46,7 +53,7 @@ catch (Exception ex)
 TelegramBotClient telegramBotClient = await InitBot(Token);
 
 CancellationToken CancellationToken = new CancellationToken();
-Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(updateFrequencySeconds), CancellationToken);
+Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(updateFrequencySeconds), TimeSpan.FromMinutes(updateResetMinutes), CancellationToken);
 
 while (true)
     await Task.Delay(TimeSpan.FromMinutes(1), CancellationToken);
@@ -63,15 +70,35 @@ async Task<TelegramBotClient> InitBot(string Token)
     return telegramBotClient;
 }
 
-async Task PeriodicUpdateDB(DbManager dbManager, TimeSpan interval, CancellationToken cancellationToken)
+async Task PeriodicUpdateDB(DbManager dbManager, TimeSpan updateFreqSeconds, TimeSpan resetFreqMinutes, CancellationToken cancellationToken)
 {
-    string lastFilmsWithShowing = "";
     while (true)
     {
-        lastFilmsWithShowing = dbManager.UpdateDB(lastFilmsWithShowing, out UpdateDBOutput output);
-
-        await Task.Delay(interval, cancellationToken);
+        string filmsWithShowings = await GetTheSpaceFilmsWithShowings();
+        dbManager.UpdateDB(filmsWithShowings, out UpdateDBOutput output);
+        DateTime? lastReset = dbManager.GetRunningInfo(CinemaRolfoBot.Model.DB.ERunningInfoId.LastReset);
+        if (lastReset == null || lastReset.Value.Add(resetFreqMinutes) <= DateTime.Now)
+        {
+            dbManager.WipeDB();
+            dbManager.UpdateDB(filmsWithShowings, out UpdateDBOutput _);
+        }
+        await Task.Delay(updateFreqSeconds, cancellationToken);
         if (cancellationToken.IsCancellationRequested)
             break;
     }
+}
+
+async Task<string> GetTheSpaceFilmsWithShowings()
+{
+    string responseBody = "";
+    try
+    {
+        responseBody = await Const.HttpClient.GetStringAsync(Const.TSB_FILMS_WITH_SHOWING_URL);
+    }
+    catch (HttpRequestException e)
+    {
+        //TODO Notify errors to mantainers users
+        Log.Error($"HTTP error on getting '{Const.TSB_FILMS_WITH_SHOWING_URL}'. Error message: {e.Message}");
+    }
+    return responseBody;
 }
