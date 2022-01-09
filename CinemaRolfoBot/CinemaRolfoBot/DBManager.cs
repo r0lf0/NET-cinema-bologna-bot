@@ -28,7 +28,6 @@ namespace CinemaRolfoBot
             output = new UpdateDBOutput();
 
             //Comparing with previous responseBody
-            filmsWithShowings_json = Regex.Replace(filmsWithShowings_json, @"\s+", string.Empty);
             if (filmsWithShowings_json == lastFilmsWithShowings)
                 return;
 
@@ -123,6 +122,11 @@ namespace CinemaRolfoBot
         public DateTime? GetRunningInfo(ERunningInfoId runningInfoId)
         {
             return (Context?.RunningInfos?.Find(runningInfoId)?.Value);
+        }
+
+        public Model.DB.Film? GetFilmDetail(string filmId)
+        {
+            return Context?.Films?.Include(f => f.Showings).FirstOrDefault(f => f.Id == filmId);
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using CinemaRolfoBot.Utils;
 using log4net;
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Text.RegularExpressions;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Extensions.Polling;
@@ -14,9 +16,12 @@ namespace CinemaRolfoBot
         private static readonly ILog Log = LogManager.GetLogger(typeof(BotManager));
 
         private TelegramBotClient telegramBotClient = null;
+        private DbManager dbManager = null;
 
-        public BotManager(string token)
+        public BotManager(string token, DbManager dbManager)
         {
+            this.dbManager = dbManager;
+
             telegramBotClient = new TelegramBotClient(token);
             var me = AsyncHelpers.RunSync(() => telegramBotClient.GetMeAsync());
             Log.Info($"Telegram bot '{me.FirstName}' with id '{me.Id}' correctly initialized.");
@@ -44,7 +49,11 @@ namespace CinemaRolfoBot
                          || string.IsNullOrWhiteSpace(messageText))
                 _ = SendErrorMessageWithHelpRedirect(chatId);
             else if (Commands_Help.Contains(messageText, StringComparer.OrdinalIgnoreCase))
-                _ = HandleHelpCmd(chatId, update.Message);
+                _ = HandleHelpCmd(chatId);
+            else if (Commands_FilmDetails.Contains(messageText, StringComparer.OrdinalIgnoreCase))
+                _ = HandleFilmsCommand(chatId);
+            else if (messageText.StartsWith(@"/f"))
+                _ = HandleFilmDetailCommand(chatId, update.Message);
             else
                 _ = SendErrorMessageWithHelpRedirect(chatId);
 
@@ -64,20 +73,45 @@ namespace CinemaRolfoBot
             return Task.CompletedTask;
         }
 
-        private async Task<string> SendErrorMessageWithHelpRedirect(ChatId chatId)
+        private async Task<IEnumerable<Message>> SendErrorMessageWithHelpRedirect(ChatId chatId)
         {
-            Message sentMessage = await telegramBotClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: EmojiParser.ReplaceColonNames(Msg_Error));
-            return sentMessage.Text;
+            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(Msg_Error), parseEmoji: true);
         }
 
-        private async Task<string> HandleHelpCmd(ChatId chatId, Message message)
+        private async Task<IEnumerable<Message>> HandleHelpCmd(ChatId chatId)
         {
-            Message sentMessage = await telegramBotClient.SendTextMessageAsync(
-                chatId: chatId,
-                text: Msg_Welcome);
-            return sentMessage.Text;
+            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(Msg_Welcome), parseEmoji: false);
+        }
+
+        private async Task<IEnumerable<Message>> HandleFilmsCommand(ChatId chatId)
+        {
+            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape("Ci stiamo lavorando..."), false);
+        }
+
+        private async Task<IEnumerable<Message>> HandleFilmDetailCommand(ChatId chatId, Message message)
+        {
+            List<Message> list = new List<Message>();
+            string idFilm = message.Text.Remove(0, 2);
+
+            Model.DB.Film? film = dbManager.GetFilmDetail(idFilm);
+            if (film == null)
+                list.AddRange(await SendMessage(chatId, $"Film con id *{BotMessagesUtils.TelegramStringEscape(idFilm)}* non trovato", parseEmoji: false));
+            else
+            {
+                try
+                {
+                    if (film.Poster != null)
+                        list.Add(await SendPhoto(chatId, film.Poster));
+                    list.AddRange(await SendMessage(chatId, ShowingParser.ParseFilmDetails(film), parseEmoji: true));
+                    list.AddRange(await SendMessage(chatId, ShowingParser.ParseFilmShowings(film), parseEmoji: true));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"Error while sending film details to {chatId}. Error type: '{ex.GetType()}', Error message: {ex.Message}");
+                }
+            }
+
+            return list;
         }
 
         private static readonly IEnumerable<string> Commands_Help = new List<string> { "/aiuto", "/help", "/start" };
@@ -95,5 +129,35 @@ namespace CinemaRolfoBot
 
         private const string Msg_Error = "Scusa, non ho capito... :sob:" +
                                          "\nPer il momento accetto solo i comandi riportati qui: /aiuto";
+
+        public async Task<Message> SendPhoto(ChatId chatId, byte[] photo, string? caption = null)
+        {
+            using (Stream stream = new MemoryStream(photo))
+            {
+                return await telegramBotClient.SendPhotoAsync(
+                    chatId: chatId,
+                    photo: stream,
+                    caption: caption
+                );
+            }
+        }
+
+        public async Task<IEnumerable<Message>> SendMessage(ChatId chatId, string message, bool parseEmoji)
+        {
+            List<Message> SentMessages = new List<Message>();
+
+            if (parseEmoji)
+                message = EmojiParser.ReplaceColonNames(message);
+
+            foreach (string m in BotMessagesUtils.SplitMessage(message))
+            {
+                SentMessages.Add(await telegramBotClient.SendTextMessageAsync(
+                                        chatId: chatId,
+                                        text: m,
+                                        parseMode: ParseMode.MarkdownV2));
+            }
+
+            return SentMessages;
+        }
     }
 }

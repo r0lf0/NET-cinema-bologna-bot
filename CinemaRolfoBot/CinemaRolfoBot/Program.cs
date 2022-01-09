@@ -49,7 +49,7 @@ catch (Exception ex)
     return -1;
 }
 
-BotManager botManager = new BotManager(Token);
+BotManager botManager = new BotManager(Token, dbManager);
 
 CancellationToken CancellationToken = new CancellationToken();
 Task task = PeriodicUpdateDB(dbManager, TimeSpan.FromSeconds(updateFrequencySeconds), TimeSpan.FromMinutes(updateResetMinutes), CancellationToken);
