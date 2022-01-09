@@ -128,5 +128,13 @@ namespace CinemaRolfoBot
         {
             return Context?.Films?.Include(f => f.Showings).FirstOrDefault(f => f.Id == filmId);
         }
+
+        public IEnumerable<Model.DB.Film> GetAllFilms(bool withShowings)
+        {
+            if (withShowings)
+                return Context?.Films?.Include(f => f.Showings);
+            else
+                return Context?.Films;
+        }
     }
 }

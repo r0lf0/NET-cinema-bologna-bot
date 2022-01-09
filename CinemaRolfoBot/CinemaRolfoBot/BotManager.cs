@@ -48,11 +48,11 @@ namespace CinemaRolfoBot
                          || update.Message!.Type != MessageType.Text
                          || string.IsNullOrWhiteSpace(messageText))
                 _ = SendErrorMessageWithHelpRedirect(chatId);
-            else if (Commands_Help.Contains(messageText, StringComparer.OrdinalIgnoreCase))
+            else if (Const.Commands_Help.Contains(messageText, StringComparer.OrdinalIgnoreCase))
                 _ = HandleHelpCmd(chatId);
-            else if (Commands_FilmDetails.Contains(messageText, StringComparer.OrdinalIgnoreCase))
+            else if (Const.Commands_Films.Contains(messageText, StringComparer.OrdinalIgnoreCase))
                 _ = HandleFilmsCommand(chatId);
-            else if (messageText.StartsWith(@"/f"))
+            else if (messageText.StartsWith(Const.CommandsPrefix_FilmDetail))
                 _ = HandleFilmDetailCommand(chatId, update.Message);
             else
                 _ = SendErrorMessageWithHelpRedirect(chatId);
@@ -75,23 +75,25 @@ namespace CinemaRolfoBot
 
         private async Task<IEnumerable<Message>> SendErrorMessageWithHelpRedirect(ChatId chatId)
         {
-            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(Msg_Error), parseEmoji: true);
+            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(Const.Msg_Error), parseEmoji: true);
         }
 
         private async Task<IEnumerable<Message>> HandleHelpCmd(ChatId chatId)
         {
-            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(Msg_Welcome), parseEmoji: false);
+            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(Const.Msg_Welcome), parseEmoji: false);
         }
 
         private async Task<IEnumerable<Message>> HandleFilmsCommand(ChatId chatId)
         {
-            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape("Ci stiamo lavorando..."), false);
+            IEnumerable<Model.DB.Film>? films = dbManager.GetAllFilms(withShowings: false);
+            string message = ShowingParser.ParseFilmsList(films);
+            return await SendMessage(chatId, message, true);
         }
 
         private async Task<IEnumerable<Message>> HandleFilmDetailCommand(ChatId chatId, Message message)
         {
             List<Message> list = new List<Message>();
-            string idFilm = message.Text.Remove(0, 2);
+            string idFilm = message.Text.Remove(0, Const.CommandsPrefix_FilmDetail.Length);
 
             Model.DB.Film? film = dbManager.GetFilmDetail(idFilm);
             if (film == null)
@@ -114,22 +116,6 @@ namespace CinemaRolfoBot
             return list;
         }
 
-        private static readonly IEnumerable<string> Commands_Help = new List<string> { "/aiuto", "/help", "/start" };
-        private static readonly IEnumerable<string> Commands_TodayShowings = new List<string> { "/todayshowings" };
-        private static readonly IEnumerable<string> Commands_DailyShowingsAll = new List<string> { "/completeshowings" };
-        private static readonly IEnumerable<string> Commands_FilmDetails = new List<string> { "/film" };
-        private static readonly IEnumerable<string> Commands_WhichTime = new List<string> { "/ora" };
-
-        private const string Msg_Welcome = "Ciao, sono il bot non ufficiale del The Space di Bologna." +
-                                           "Ecco le cose che puoi chiedermi:" +
-                                           "\n/aiuto per rileggere questo messaggio' " +
-                                           "\n/showPerData per ricevere la programmazione per data' " +
-                                           "\n/film per la lista dei film in programmazione' " +
-                                           "\n/film seguito da parte del titolo di un film per conoscerne i dettagli";
-
-        private const string Msg_Error = "Scusa, non ho capito... :sob:" +
-                                         "\nPer il momento accetto solo i comandi riportati qui: /aiuto";
-
         public async Task<Message> SendPhoto(ChatId chatId, byte[] photo, string? caption = null)
         {
             using (Stream stream = new MemoryStream(photo))
@@ -149,12 +135,19 @@ namespace CinemaRolfoBot
             if (parseEmoji)
                 message = EmojiParser.ReplaceColonNames(message);
 
-            foreach (string m in BotMessagesUtils.SplitMessage(message))
+            try
             {
-                SentMessages.Add(await telegramBotClient.SendTextMessageAsync(
-                                        chatId: chatId,
-                                        text: m,
-                                        parseMode: ParseMode.MarkdownV2));
+                foreach (string m in BotMessagesUtils.SplitMessage(message))
+                {
+                    SentMessages.Add(await telegramBotClient.SendTextMessageAsync(
+                                            chatId: chatId,
+                                            text: m,
+                                            parseMode: ParseMode.MarkdownV2));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Can't send message '{message}' to {chatId}. Exception type: {ex.GetType()}. Error message: {ex.Message}");
             }
 
             return SentMessages;

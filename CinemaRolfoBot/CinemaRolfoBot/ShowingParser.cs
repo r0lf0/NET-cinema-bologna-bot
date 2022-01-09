@@ -57,5 +57,27 @@ namespace CinemaRolfoBot
 
             return parsedShowings;
         }
+
+        public static string ParseFilmsList(IEnumerable<Model.DB.Film> films)
+        {
+            if (films == null || films.Count() <= 0)
+                return "_Nessun film in programmazione_";
+
+            string output = ":film_frames: *Film in programmazione️* :film_frames:\n\n";
+
+            DateTime lastDate = DateTime.MinValue;
+            foreach (Model.DB.Film film in films.OrderBy(f => f.Released ?? DateTime.MinValue))
+            {
+                if (film.Released >= lastDate.AddDays(1) && DateTime.Now < film.Released)
+                    output += $"\n:calendar:In uscita il {film.Released.Value.ToString("dd/MM/yyyy")}\n";
+
+                output += BotMessagesUtils.TelegramStringEscape($"{Const.CommandsPrefix_FilmDetail}{film.Id} {film.Title}\n");
+                lastDate = film.Released ?? DateTime.MaxValue;
+            }
+
+            output += "\n";
+
+            return output;
+        }
     }
 }
