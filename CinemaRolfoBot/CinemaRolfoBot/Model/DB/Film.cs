@@ -21,13 +21,7 @@ namespace CinemaRolfoBot.Model.DB
         public DateTime? Released
         {
             get => _Released;
-            set
-            {
-                if (value.HasValue)
-                    _Released = value.SetKindUtc();
-                else
-                    _Released = null;
-            }
+            set { _Released = value.SetKindUtc(); }
         }
 
         [NotMapped]
