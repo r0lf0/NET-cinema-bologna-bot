@@ -54,7 +54,7 @@ namespace CinemaRolfoBot.Model.DB
         {
             this.Id = filmJson.id;
             this.Title = filmJson.title;
-            this.Released = filmJson.ReleaseDate.SetKindUtc();
+            this.Released = filmJson.ReleaseDate;
             this.Director = filmJson.info_director;
             this.Cast = filmJson.info_cast;
             this.Synopsis = filmJson.synopsis_short;

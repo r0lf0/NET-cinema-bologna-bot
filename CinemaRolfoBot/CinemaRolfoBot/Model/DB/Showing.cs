@@ -47,7 +47,7 @@ namespace CinemaRolfoBot.Model.DB
         public Showing(Json.Time timeJson)
         {
             this.Id = timeJson.session_id;
-            this.DateAndTime = timeJson.date.SetKindUtc();
+            this.DateAndTime = timeJson.date;
             this.Screen = timeJson.screen_number;
         }
     }
