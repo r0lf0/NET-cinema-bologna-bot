@@ -29,7 +29,8 @@
         public const string Msg_Welcome = "Ciao, sono il bot non ufficiale del The Space di Bologna." +
                                            "Ecco le cose che puoi chiedermi:" +
                                            "\n/aiuto per rileggere questo messaggio' " +
-                                           "\n/showPerData per ricevere la programmazione per data' " +
+                                           "\n/todayshowings per ricevere la programmazione di oggi' " +
+                                           "\n/completeshowings per ricevere la programmazione completa' " +
                                            "\n/film per la lista dei film in programmazione' " +
                                            "\n/film seguito da parte del titolo di un film per conoscerne i dettagli";
 
