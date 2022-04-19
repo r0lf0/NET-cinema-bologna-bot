@@ -1,6 +1,6 @@
-﻿using CinemaRolfoBot.Utils;
+﻿using CinemaRolfoBot.Model.DB;
+using CinemaRolfoBot.Utils;
 using System.Globalization;
-using CinemaRolfoBot.Model.DB;
 
 namespace CinemaRolfoBot
 {
@@ -97,32 +97,37 @@ namespace CinemaRolfoBot
         /// <returns>Parsed today showings list</returns>
         public static string ParseTodayShowingsList(IEnumerable<Model.DB.Film> films)
         {
-            string output = ":film_frames: *Film in programmazione️ oggi " + DateTime.Today.Day + "/" + DateTime.Today.Month + "* :film_frames:\n";
-            string output2 = output;
-            foreach (Model.DB.Film film in films.OrderBy(f => f.Released ?? DateTime.MaxValue))
+            DateTime tonightEnding = GetTonightEnding();
+            string output = $":film_frames: *Film in programmazione️ oggi, {DateTime.Today.ToString("ddd d/M")}* :film_frames:\n";
+
+            var todayFilms = films.Where(f => f.Showings.Any(s => s.DateAndTime <= tonightEnding));
+
+            //Check for at least one show today
+            if (!todayFilms.Any())
+                return BotMessagesUtils.TelegramStringEscape($"Nessun film in programmazione oggi, {DateTime.Today.ToString("ddd d/M")}...") + " :cry:";
+
+            foreach (Model.DB.Film film in todayFilms.OrderByDescending(f => f.Released ?? DateTime.MaxValue))
             {
-                bool writtenFilmTitle = false;
-                foreach (Showing showing in film.Showings)
+                output += BotMessagesUtils.TelegramStringEscape($"\n {Const.CommandsPrefix_FilmDetail}{film.Id} {film.Title}\n");
+                foreach (Showing showing in film.Showings.OrderBy(s => s.DateAndTime))
                 {
-                    if (showing.DateAndTime.Date == DateTime.Today.Date && showing.DateAndTime.AddMinutes(10) >= DateTime.Today)
+                    if (showing.DateAndTime < tonightEnding)
                     {
-                        if (!writtenFilmTitle)
-                        {
-                            output += "\n" + "/f_" + film.Id + " " + film.Title + "\n";
-                            writtenFilmTitle = true;
-                        }
-                        output += "- " + showing.DateAndTime.Hour + ":" + showing.DateAndTime.Minute;
-                        if (showing.DateAndTime.Minute == 0)
-                            output += "0";
-                        output += " sala " + showing.Screen + "\n";
+                        output += BotMessagesUtils.TelegramStringEscape($"- {showing.DateAndTime.ToString("HH:mm")} sala {showing.Screen} \n");
                     }
                 }
             }
-            if (output == output2)
-            {
-                output = "Nessun'altro film in programmazione oggi... :cry:";
-            }
             return output;
+        }
+
+        private static DateTime GetTonightEnding()
+        {
+            DateTime today = DateTime.Now;
+            DateTime tomorrow = today.AddDays(1);
+            if (today.Hour >= 4)
+                return new DateTime(tomorrow.Year, tomorrow.Month, tomorrow.Day, 4, 0, 0);
+            else
+                return new DateTime(today.Year, today.Month, today.Day, 4, 0, 0);
         }
     }
 }
