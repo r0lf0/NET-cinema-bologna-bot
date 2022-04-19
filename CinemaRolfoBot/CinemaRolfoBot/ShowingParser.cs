@@ -98,6 +98,7 @@ namespace CinemaRolfoBot
         public static string ParseTodayShowingsList(IEnumerable<Model.DB.Film> films)
         {
             string output = ":film_frames: *Film in programmazione️ oggi " + DateTime.Today.Day + "/" + DateTime.Today.Month + "* :film_frames:\n";
+            string output2 = output;
             foreach (Model.DB.Film film in films.OrderBy(f => f.Released ?? DateTime.MaxValue))
             {
                 bool writtenFilmTitle = false;
@@ -107,7 +108,7 @@ namespace CinemaRolfoBot
                     {
                         if (!writtenFilmTitle)
                         {
-                            output += "\n" + BotMessagesUtils.TelegramStringEscape(film.Title) + "\n";
+                            output += "\n" + "/f\\_" + film.Id + " " + film.Title + "\n";
                             writtenFilmTitle = true;
                         }
                         output += "\\- " + showing.DateAndTime.Hour + ":" + showing.DateAndTime.Minute;
@@ -116,6 +117,11 @@ namespace CinemaRolfoBot
                         output += " sala " + showing.Screen + "\n";
                     }
                 }
+            }
+            output = output2;
+            if (output == output2)
+            {
+                output = "Nessun'altro film in programmazione oggi... :cry:";
             }
             return output;
         }

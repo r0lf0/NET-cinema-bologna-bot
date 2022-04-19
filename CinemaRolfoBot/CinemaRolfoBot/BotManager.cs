@@ -96,7 +96,7 @@ namespace CinemaRolfoBot
         {
             IEnumerable<Model.DB.Film>? films = dbManager.GetAllFilms(withShowings: true);
             string message = ShowingParser.ParseTodayShowingsList(films);
-            return await SendMessage(chatId, message, true);
+            return await SendMessage(chatId, BotMessagesUtils.TelegramStringEscape(message), parseEmoji: true);
         }
 
         private async Task<IEnumerable<Message>> HandleFilmDetailCommand(ChatId chatId, Message message)
