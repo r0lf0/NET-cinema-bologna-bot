@@ -54,6 +54,8 @@ namespace CinemaRolfoBot
                 _ = HandleFilmsCommand(chatId);
             else if (messageText.StartsWith(Const.CommandsPrefix_FilmDetail))
                 _ = HandleFilmDetailCommand(chatId, update.Message);
+            else if (Const.Commands_TodayShowings.Contains(messageText, StringComparer.OrdinalIgnoreCase))
+                _ = HandleTodayShowingsCommand(chatId);
             else
                 _ = SendErrorMessageWithHelpRedirect(chatId);
 
@@ -87,6 +89,13 @@ namespace CinemaRolfoBot
         {
             IEnumerable<Model.DB.Film>? films = dbManager.GetAllFilms(withShowings: false);
             string message = ShowingParser.ParseFilmsList(films);
+            return await SendMessage(chatId, message, true);
+        }
+
+        private async Task<IEnumerable<Message>> HandleTodayShowingsCommand(ChatId chatId)
+        {
+            IEnumerable<Model.DB.Film>? films = dbManager.GetAllFilms(withShowings: true);
+            string message = ShowingParser.ParseTodayShowingsList(films);
             return await SendMessage(chatId, message, true);
         }
 

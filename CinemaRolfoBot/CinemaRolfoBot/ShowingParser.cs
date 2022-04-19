@@ -1,11 +1,6 @@
 ﻿using CinemaRolfoBot.Utils;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using CinemaRolfoBot.Model.DB;
 
 namespace CinemaRolfoBot
 {
@@ -13,6 +8,11 @@ namespace CinemaRolfoBot
     {
         private static CultureInfo Culture = new System.Globalization.CultureInfo("it-IT");
 
+        /// <summary>
+        /// Get parsed informations about a given <paramref name="film"/>
+        /// </summary>
+        /// <param name="film">Film to get informations about</param>
+        /// <returns>Parsed informations</returns>
         public static string ParseFilmDetails(Model.DB.Film film)
         {
             string parsedFilm = "";
@@ -40,6 +40,11 @@ namespace CinemaRolfoBot
             return parsedFilm;
         }
 
+        /// <summary>
+        /// Get parsed showings of a given <paramref name="film"/>
+        /// </summary>
+        /// <param name="film">Film to get showings of</param>
+        /// <returns>Parsed showings</returns>
         public static string ParseFilmShowings(Model.DB.Film film)
         {
             if (film.Showings?.Any() != true)
@@ -58,6 +63,11 @@ namespace CinemaRolfoBot
             return parsedShowings;
         }
 
+        /// <summary>
+        /// Get parsed <paramref name="films"/> list
+        /// </summary>
+        /// <param name="films">Given films list</param>
+        /// <returns>Parsed <paramref name="films"/> list</returns>
         public static string ParseFilmsList(IEnumerable<Model.DB.Film> films)
         {
             if (films == null || films.Count() <= 0)
@@ -77,6 +87,36 @@ namespace CinemaRolfoBot
 
             output += "\n";
 
+            return output;
+        }
+
+        /// <summary>
+        /// Get parsed today showing list from <paramref name="film"/> collection
+        /// </summary>
+        /// <param name="films">Complete films list</param>
+        /// <returns>Parsed today showings list</returns>
+        public static string ParseTodayShowingsList(IEnumerable<Model.DB.Film> films)
+        {
+            string output = ":film_frames: *Film in programmazione️ oggi " + DateTime.Today.Day + "/" + DateTime.Today.Month + "* :film_frames:\n";
+            foreach (Model.DB.Film film in films.OrderBy(f => f.Released ?? DateTime.MaxValue))
+            {
+                bool writtenFilmTitle = false;
+                foreach (Showing showing in film.Showings)
+                {
+                    if (showing.DateAndTime.Date == DateTime.Today.Date && showing.DateAndTime.AddMinutes(10) >= DateTime.Today)
+                    {
+                        if (!writtenFilmTitle)
+                        {
+                            output += "\n" + BotMessagesUtils.TelegramStringEscape(film.Title) + "\n";
+                            writtenFilmTitle = true;
+                        }
+                        output += "\\- " + showing.DateAndTime.Hour + ":" + showing.DateAndTime.Minute;
+                        if (showing.DateAndTime.Minute == 0)
+                            output += "0";
+                        output += " sala " + showing.Screen + "\n";
+                    }
+                }
+            }
             return output;
         }
     }
