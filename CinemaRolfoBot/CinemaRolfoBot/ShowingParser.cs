@@ -108,17 +108,16 @@ namespace CinemaRolfoBot
                     {
                         if (!writtenFilmTitle)
                         {
-                            output += "\n" + "/f\\_" + film.Id + " " + film.Title + "\n";
+                            output += "\n" + "/f_" + film.Id + " " + film.Title + "\n";
                             writtenFilmTitle = true;
                         }
-                        output += "\\- " + showing.DateAndTime.Hour + ":" + showing.DateAndTime.Minute;
+                        output += "- " + showing.DateAndTime.Hour + ":" + showing.DateAndTime.Minute;
                         if (showing.DateAndTime.Minute == 0)
                             output += "0";
                         output += " sala " + showing.Screen + "\n";
                     }
                 }
             }
-            output = output2;
             if (output == output2)
             {
                 output = "Nessun'altro film in programmazione oggi... :cry:";
