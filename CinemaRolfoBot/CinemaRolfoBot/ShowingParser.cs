@@ -120,6 +120,34 @@ namespace CinemaRolfoBot
             return output;
         }
 
+        public static string ParseCompleteShowingsList(IEnumerable<Model.DB.Film> films)
+        {
+            DateTime tonightEnding = GetTonightEnding();
+            DateTime weekEnding = tonightEnding.AddDays(7);
+            string output = $":film_frames: *Film in programmazione️ nella prossima settimana* :film_frames:\n";
+            IEnumerable<Film>? thisWeekFilms = films.Where(f => f.Showings.Any(s => s.DateAndTime <= weekEnding));
+            if (!thisWeekFilms.Any())
+                return BotMessagesUtils.TelegramStringEscape($"Nessun film in programmazione questa settimana...") + " :cry:";
+            for (int i = 0; i < 7; i++)
+            {
+                var thisDayShowings = thisWeekFilms.Where(f => f.Showings.Any(s => s.DateAndTime.Day == tonightEnding.AddDays(i - 1).Day));
+                if (thisDayShowings.Any())
+                    output += "\n:calendar:" + BotMessagesUtils.TelegramStringEscape($"Film di {tonightEnding.AddDays(i - 1).ToString("ddd d/M")}\n");
+                foreach (Model.DB.Film film in thisDayShowings.OrderByDescending(f => f.Released ?? DateTime.MaxValue))
+                {
+                    output += BotMessagesUtils.TelegramStringEscape($"{Const.CommandsPrefix_FilmDetail}{film.Id} {film.Title}\n");
+                    foreach (Showing showing in film.Showings.OrderBy(s => s.DateAndTime))
+                    {
+                        if (showing.DateAndTime < tonightEnding)
+                        {
+                            output += BotMessagesUtils.TelegramStringEscape($"- {showing.DateAndTime.ToString("HH:mm")} sala {showing.Screen} \n");
+                        }
+                    }
+                }
+            }
+            return output;
+        }
+
         private static DateTime GetTonightEnding()
         {
             DateTime today = DateTime.Now;
