@@ -11,12 +11,32 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
   adminer:
     image: adminer
     # restart: always
     ports:
-      - 8080:8080
+      - 18080:8080
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cinema-rolfo-bot:
+    image: cinema-rolfo-bot
+    environment:
+      - TOKEN=1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ /* Replace with telegram bot token */
+      - POSTGRESSQL=Host=db;Database=Cinema;Username=postgres;Password=postgres
+      - UPDATE_FREQ_SECONDS=300
+      - RESET_FREQ_MINUTES=720
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres-data:

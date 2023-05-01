@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "CinemaRolfoBot": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "TOKEN": "1153351617:AAGaHqqYLdIESB4ng_yQXdQEMVe094Yx2WA",
+        "POSTGRESSQL": "Host=localhost;Database=Cinema;Username=postgres;Password=postgres",
+        "UPDATE_FREQ_SECONDS": "10",
+        "RESET_FREQ_MINUTES": "1"
+      }
+    }
+  }
+}
