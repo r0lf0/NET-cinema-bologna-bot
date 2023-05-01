@@ -56,7 +56,7 @@ namespace CinemaRolfoBot
             {
                 if (showing.DateAndTime.Date >= lastDate.AddDays(1))
                     parsedShowings += $":calendar:Spettacoli di {Culture.DateTimeFormat.GetDayName(showing.DateAndTime.DayOfWeek)} {showing.DateAndTime.ToString("dd/MM")}\n";
-                parsedShowings += BotMessagesUtils.TelegramStringEscape($"{showing.DateAndTime.ToString("HH:ss")} - sala {showing.Screen}\n");
+                parsedShowings += BotMessagesUtils.TelegramStringEscape($"{showing.DateAndTime.ToString("HH:mm")} - sala {showing.Screen}\n");
                 lastDate = showing.DateAndTime.Date;
             }
 
@@ -109,7 +109,7 @@ namespace CinemaRolfoBot
             foreach (Model.DB.Film film in todayFilms.OrderByDescending(f => f.Released ?? DateTime.MaxValue))
             {
                 output += BotMessagesUtils.TelegramStringEscape($"\n {Const.CommandsPrefix_FilmDetail}{film.Id} {film.Title}\n");
-                foreach (Showing showing in film.Showings.OrderBy(s => s.DateAndTime))
+                foreach (Model.DB.Showing showing in film.Showings.OrderBy(s => s.DateAndTime))
                 {
                     if (showing.DateAndTime < tonightEnding)
                     {
@@ -122,28 +122,33 @@ namespace CinemaRolfoBot
 
         public static string ParseCompleteShowingsList(IEnumerable<Model.DB.Film> films)
         {
-            DateTime tonightEnding = GetTonightEnding();
-            DateTime weekEnding = tonightEnding.AddDays(7);
+            DateTime currentNightEnding = GetTonightEnding();
+            DateTime lastNightEnding = currentNightEnding.AddDays(-1);
+            DateTime weekEnding = currentNightEnding.AddDays(7);
             string output = $":film_frames: *Film in programmazione️ nella prossima settimana* :film_frames:\n";
-            IEnumerable<Film>? thisWeekFilms = films.Where(f => f.Showings.Any(s => s.DateAndTime <= weekEnding));
+            IEnumerable<Model.DB.Film>? thisWeekFilms = films.Where(f => f.Showings.Any(s => s.DateAndTime <= weekEnding));
             if (!thisWeekFilms.Any())
                 return BotMessagesUtils.TelegramStringEscape($"Nessun film in programmazione questa settimana...") + " :cry:";
-            for (int i = 0; i < 7; i++)
+            while (currentNightEnding <= weekEnding)
             {
-                var thisDayShowings = thisWeekFilms.Where(f => f.Showings.Any(s => s.DateAndTime.Day == tonightEnding.AddDays(i - 1).Day));
-                if (thisDayShowings.Any())
-                    output += "\n:calendar:" + BotMessagesUtils.TelegramStringEscape($"Film di {tonightEnding.AddDays(i - 1).ToString("ddd d/M")}\n");
-                foreach (Model.DB.Film film in thisDayShowings.OrderByDescending(f => f.Released ?? DateTime.MaxValue))
+                IEnumerable<Model.DB.Film> currentDayFilms = thisWeekFilms.Where(f => f.Showings.Any(s => s.DateAndTime <= currentNightEnding && s.DateAndTime >= lastNightEnding));
+                if (currentDayFilms.Any())
                 {
-                    output += BotMessagesUtils.TelegramStringEscape($"{Const.CommandsPrefix_FilmDetail}{film.Id} {film.Title}\n");
-                    foreach (Showing showing in film.Showings.OrderBy(s => s.DateAndTime))
+                    output += "\n:calendar:" + BotMessagesUtils.TelegramStringEscape($"Film di {lastNightEnding.ToString("ddd d/M")}\n");
+                    foreach (Model.DB.Film film in currentDayFilms.OrderByDescending(f => f.Released ?? DateTime.MaxValue))
                     {
-                        if (showing.DateAndTime < tonightEnding)
+                        output += BotMessagesUtils.TelegramStringEscape($"{Const.CommandsPrefix_FilmDetail}{film.Id} {film.Title}\n");
+                        foreach (Model.DB.Showing showing in film.Showings.OrderBy(s => s.DateAndTime))
                         {
-                            output += BotMessagesUtils.TelegramStringEscape($"- {showing.DateAndTime.ToString("HH:mm")} sala {showing.Screen} \n");
+                            if (showing.DateAndTime <= currentNightEnding && showing.DateAndTime >= lastNightEnding)
+                            {
+                                output += BotMessagesUtils.TelegramStringEscape($"- {showing.DateAndTime.ToString("HH:mm")} sala {showing.Screen} \n");
+                            }
                         }
                     }
                 }
+                lastNightEnding = currentNightEnding;
+                currentNightEnding = currentNightEnding.AddDays(1);
             }
             return output;
         }
