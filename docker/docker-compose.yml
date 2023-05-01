@@ -28,7 +28,7 @@ services:
         condition: service_healthy
 
   cinema-rolfo-bot:
-    image: cinema-rolfo-bot
+    image: r0lf0/cinema-rolfo-bot:latest
     environment:
       - TOKEN=1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ /* Replace with telegram bot token */
       - POSTGRESSQL=Host=db;Database=Cinema;Username=postgres;Password=postgres

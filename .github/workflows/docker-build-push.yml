@@ -28,4 +28,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: r0lf0/cinema-rolfo-bot:${{ github.sha }}
+        tags: r0lf0/cinema-rolfo-bot:latest
